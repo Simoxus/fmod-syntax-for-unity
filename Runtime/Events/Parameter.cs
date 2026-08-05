@@ -1,6 +1,6 @@
-using System;
 using FMOD.Studio;
 using FMODUnity;
+using System;
 
 #if SCRIPTABLE_OBJECT_COLLECTION
 using BrunoMikoski.ScriptableObjectCollections;
@@ -18,10 +18,13 @@ namespace RoyTheunissen.FMODSyntax
 
         protected EventInstance instance;
 
-        public Parameter(PARAMETER_ID id, bool isGlobal)
+        public string Name { get; }
+
+        public Parameter(PARAMETER_ID id, bool isGlobal, string name)
         {
             this.id = id;
             this.isGlobal = isGlobal;
+            Name = name;
         }
 
         public void InitializeAsEventParameter(EventInstance instance)
@@ -29,7 +32,7 @@ namespace RoyTheunissen.FMODSyntax
             this.instance = instance;
         }
     }
-    
+
     public abstract class ParameterGeneric<ValueType> : Parameter
     {
         private float floatValue;
@@ -56,15 +59,15 @@ namespace RoyTheunissen.FMODSyntax
         protected abstract ValueType GetValueFromFloat(float value);
         protected abstract float GetFloatFromValue(ValueType value);
 
-        protected ParameterGeneric(PARAMETER_ID id, bool isGlobal)
-            : base(id, isGlobal)
+        protected ParameterGeneric(PARAMETER_ID id, bool isGlobal, string name)
+            : base(id, isGlobal, name)
         {
         }
     }
-    
+
     public sealed class ParameterFloat : ParameterGeneric<float>
     {
-        public ParameterFloat(PARAMETER_ID id, bool isGlobal) : base(id, isGlobal)
+        public ParameterFloat(PARAMETER_ID id, bool isGlobal, string name) : base(id, isGlobal, name)
         {
         }
 
@@ -78,10 +81,10 @@ namespace RoyTheunissen.FMODSyntax
             return value;
         }
     }
-    
+
     public sealed class ParameterInt : ParameterGeneric<int>
     {
-        public ParameterInt(PARAMETER_ID id, bool isGlobal) : base(id, isGlobal)
+        public ParameterInt(PARAMETER_ID id, bool isGlobal, string name) : base(id, isGlobal, name)
         {
         }
 
@@ -95,11 +98,11 @@ namespace RoyTheunissen.FMODSyntax
             return value;
         }
     }
-    
+
     public sealed class ParameterEnum<EnumType> : ParameterGeneric<EnumType>
         where EnumType : Enum
     {
-        public ParameterEnum(PARAMETER_ID id, bool isGlobal) : base(id, isGlobal)
+        public ParameterEnum(PARAMETER_ID id, bool isGlobal, string name) : base(id, isGlobal, name)
         {
         }
 
@@ -113,12 +116,13 @@ namespace RoyTheunissen.FMODSyntax
             return (int)(object)value;
         }
     }
-    
+
 #if SCRIPTABLE_OBJECT_COLLECTION
     public sealed class ParameterScriptableObjectCollectionItem<ItemType> : ParameterGeneric<ItemType>
         where ItemType : ScriptableObjectCollectionItem
     {
-        public ParameterScriptableObjectCollectionItem(PARAMETER_ID id, bool isGlobal) : base(id, isGlobal)
+        public ParameterScriptableObjectCollectionItem(PARAMETER_ID id, bool isGlobal, string name)
+            : base(id, isGlobal, name)
         {
         }
 
@@ -133,10 +137,10 @@ namespace RoyTheunissen.FMODSyntax
         }
     }
 #endif // SCRIPTABLE_OBJECT_COLLECTION
-    
+
     public sealed class ParameterBool : ParameterGeneric<bool>
     {
-        public ParameterBool(PARAMETER_ID id, bool isGlobal) : base(id, isGlobal)
+        public ParameterBool(PARAMETER_ID id, bool isGlobal, string name) : base(id, isGlobal, name)
         {
         }
 

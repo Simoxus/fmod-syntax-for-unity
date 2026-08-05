@@ -341,6 +341,23 @@ namespace RoyTheunissen.FMODSyntax
             return labelParameterNameToUserSpecifiedType.TryGetValue(name, out enumType);
         }
 
+        /// <summary>
+        /// Appends a generated code block onto an accumulator string, guaranteeing a newline boundary between
+        /// blocks regardless of whether the source template itself ends in a trailing newline. This is what
+        /// prevents consecutive generated members (parameter fields, bank/bus/VCA fields, event fields, etc.)
+        /// from getting concatenated onto the same line if a template's trailing whitespace is ever inconsistent.
+        /// </summary>
+        private static string AppendCode(string existing, string codeToAppend)
+        {
+            if (string.IsNullOrEmpty(codeToAppend))
+                return existing;
+
+            if (!string.IsNullOrEmpty(existing) && !existing.EndsWith("\n"))
+                existing += "\r\n";
+
+            return existing + codeToAppend;
+        }
+
         private static string GetParameterCode(CodeGenerator codeGenerator, EditorParamRef parameter)
         {
             // Generate a public static readonly field for this parameter with the specified GUID. Note that this is
@@ -352,6 +369,7 @@ namespace RoyTheunissen.FMODSyntax
             codeGenerator.ReplaceKeyword("ParameterName", name);
             codeGenerator.ReplaceKeyword("ID1", parameter.ID.data1.ToString());
             codeGenerator.ReplaceKeyword("ID2", parameter.ID.data2.ToString());
+            codeGenerator.ReplaceKeyword("ParameterRawName", parameter.Name);
 
             // "Labelled parameters" require us to also generate an enum for its possible values.
             const string enumKeyword = "ParameterEnum";
@@ -570,7 +588,7 @@ namespace RoyTheunissen.FMODSyntax
                 validParameterCount++;
 
                 // Define a new local parameter for this event.
-                eventParametersCode += GetParameterCode(eventParameterGenerator, parameter);
+                eventParametersCode = AppendCode(eventParametersCode, GetParameterCode(eventParameterGenerator, parameter));
 
                 // Also cache this for generating custom play methods with all the parameters in it, it's to support
                 // a syntax like 'Events.Footstep.Play(SurfaceValues.Dirt)' where the Play method has strongly-typed
@@ -607,7 +625,7 @@ namespace RoyTheunissen.FMODSyntax
             eventParametersInitializationGenerator.Reset();
             eventParametersInitializationGenerator.ReplaceKeyword(
                 "EventParametersInitialization", eventParametersInitializationCode);
-            eventParametersCode += eventParametersInitializationGenerator.GetCode();
+            eventParametersCode = AppendCode(eventParametersCode, eventParametersInitializationGenerator.GetCode());
 
             // Now generate a custom play method with all the parameters for the playback.
             if (e.IsOneShot)
@@ -619,7 +637,7 @@ namespace RoyTheunissen.FMODSyntax
                     "ParameterArguments", parameterArguments);
                 eventPlaybackPlayMethodWithParametersGenerator.ReplaceKeyword(
                     "ParameterInitializationsFromArguments", parameterInitializationsFromArguments);
-                eventParametersCode += eventPlaybackPlayMethodWithParametersGenerator.GetCode();
+                eventParametersCode = AppendCode(eventParametersCode, eventPlaybackPlayMethodWithParametersGenerator.GetCode());
 
                 // Also generate a custom play method with all the parameters in it for the config, which is what the user
                 // will call, which just forwards it to the playback instance.
@@ -853,7 +871,7 @@ namespace RoyTheunissen.FMODSyntax
             string globalParametersCode = string.Empty;
             foreach (EditorParamRef parameter in EventManager.Parameters)
             {
-                globalParametersCode += GetParameterCode(globalParameterGenerator, parameter);
+                globalParametersCode = AppendCode(globalParametersCode, GetParameterCode(globalParameterGenerator, parameter));
             }
 
             globalParametersGenerator.Reset();
@@ -1071,11 +1089,11 @@ namespace RoyTheunissen.FMODSyntax
 
                 // Types
                 if (!isDeclaration)
-                    eventTypesCode += GetEventTypeCode(typeGenerator, e);
+                    eventTypesCode = AppendCode(eventTypesCode, GetEventTypeCode(typeGenerator, e));
 
                 // Fields
                 if (isDeclaration)
-                    eventsCode += GetEventCode(e);
+                    eventsCode = AppendCode(eventsCode, GetEventCode(e));
 
                 if (e.LocalParameters.Count == 0)
                 {
@@ -1104,7 +1122,7 @@ namespace RoyTheunissen.FMODSyntax
                         string currentEventFieldName = GetEventField(currentSyntaxPath, containerName);
                         string attribute =
                             $"[Obsolete(\"FMOD Event '{previousEventFieldName}' has been changed to '{currentEventFieldName}'\")]";
-                        eventAliasesCode += GetEventCode(e, previousName, attribute);
+                        eventAliasesCode = AppendCode(eventAliasesCode, GetEventCode(e, previousName, attribute));
                     }
                     else
                     {
@@ -1113,7 +1131,7 @@ namespace RoyTheunissen.FMODSyntax
                         string attribute =
                             $"[Obsolete(\"FMOD Event Type '{previousEventPlaybackType}' has been changed to '{currentEventPlaybackType}'\")]";
                         string eventTypeAliasCode = GetEventTypeCode(typeGenerator, e, previousName, attribute);
-                        eventTypeAliasesCode += eventTypeAliasCode;
+                        eventTypeAliasesCode = AppendCode(eventTypeAliasesCode, eventTypeAliasCode);
                     }
                 }
             }
@@ -1214,7 +1232,7 @@ namespace RoyTheunissen.FMODSyntax
 
                 bankFieldGenerator.ReplaceKeyword("BankName", bankName);
                 bankFieldGenerator.ReplaceKeyword("BankPath", bankPath);
-                banksCode += bankFieldGenerator.GetCode();
+                banksCode = AppendCode(banksCode, bankFieldGenerator.GetCode());
 
                 // Also figure out which buses there are. Apparently we access those via the banks.
                 bank.getBusList(out FMOD.Studio.Bus[] bankBuses);
@@ -1251,7 +1269,7 @@ namespace RoyTheunissen.FMODSyntax
                 busFieldGenerator.Reset();
                 busFieldGenerator.ReplaceKeyword("BusName", busName);
                 busFieldGenerator.ReplaceKeyword("BusPath", busPath);
-                busesCode += busFieldGenerator.GetCode();
+                busesCode = AppendCode(busesCode, busFieldGenerator.GetCode());
             }
 
             busesScriptGenerator.ReplaceKeyword("Buses", busesCode);
@@ -1273,7 +1291,7 @@ namespace RoyTheunissen.FMODSyntax
                 vcaFieldGenerator.Reset();
                 vcaFieldGenerator.ReplaceKeyword("VCAName", vcaName);
                 vcaFieldGenerator.ReplaceKeyword("VCAPath", vcaPath);
-                VCAsCode += vcaFieldGenerator.GetCode();
+                VCAsCode = AppendCode(VCAsCode, vcaFieldGenerator.GetCode());
             }
 
             vcasScriptGenerator.ReplaceKeyword("VCAs", VCAsCode);
