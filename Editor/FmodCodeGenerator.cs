@@ -78,9 +78,6 @@ namespace RoyTheunissen.FMODSyntax
             [SerializeField] private FmodSyntaxSettings.SyntaxFormats syntaxFormat;
             public FmodSyntaxSettings.SyntaxFormats SyntaxFormat => syntaxFormat;
 
-            [SerializeField] private string contentFingerprint = string.Empty;
-            public string ContentFingerprint => contentFingerprint;
-
             [SerializeField] private string[] eventGuidToPreviousSyntaxPaths = Array.Empty<string>();
 
             [NonSerialized]
@@ -121,11 +118,10 @@ namespace RoyTheunissen.FMODSyntax
 
             public MetaData(
                 string version, FmodSyntaxSettings.SyntaxFormats syntaxFormat,
-                Dictionary<string, string> eventGuidToPreviousSyntaxPaths, string contentFingerprint)
+                Dictionary<string, string> eventGuidToPreviousSyntaxPaths)
             {
                 this.version = version;
                 this.syntaxFormat = syntaxFormat;
-                this.contentFingerprint = contentFingerprint;
                 EventGuidToPreviousSyntaxPath = eventGuidToPreviousSyntaxPaths;
             }
 
@@ -502,7 +498,7 @@ namespace RoyTheunissen.FMODSyntax
                 Dictionary<string, string> eventGuidToPreviousSyntaxPath = GetExistingEventSyntaxPathsByGuid();
 
                 metaDataFromPreviousCodeGeneration = new MetaData(
-                    version, syntaxFormat, eventGuidToPreviousSyntaxPath, string.Empty);
+                    version, syntaxFormat, eventGuidToPreviousSyntaxPath);
             }
             else
             {
@@ -790,12 +786,6 @@ namespace RoyTheunissen.FMODSyntax
             return preDictionarySection + dictionarySection + postDictionarySection;
         }
 
-        public static string GetPreviousContentFingerprint()
-        {
-            ParseMetaData();
-            return metaDataFromPreviousCodeGeneration?.ContentFingerprint ?? string.Empty;
-        }
-
 #if !AUDIO_SYNTAX_PACKAGE_DETECTED
         [MenuItem("FMOD/Generate FMOD Code %&g", false, 999999999)]
 #endif // !AUDIO_SYNTAX_PACKAGE_DETECTED
@@ -981,9 +971,8 @@ namespace RoyTheunissen.FMODSyntax
                 // because we may still need that one for generating other files.
                 string versionNumber = GetCurrentVersionNumber();
                 FmodSyntaxSettings.SyntaxFormats syntaxFormat = Settings.SyntaxFormat;
-                string fingerprint = FmodContentFingerprint.Compute();
                 MetaData newMetaData = new MetaData(
-                    versionNumber, syntaxFormat, activeEventGuidToCurrentSyntaxPath, fingerprint);
+                    versionNumber, syntaxFormat, activeEventGuidToCurrentSyntaxPath);
                 codeGenerator.ReplaceKeyword("MetaData", newMetaData.GetJson(), true);
             }
 
