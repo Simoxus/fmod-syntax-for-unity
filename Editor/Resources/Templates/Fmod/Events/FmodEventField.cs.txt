@@ -1,3 +1,2 @@
 ##Attributes##
 public static readonly ##EventName##Config ##EventName## = new ##EventName##Config("##GUID##");
-

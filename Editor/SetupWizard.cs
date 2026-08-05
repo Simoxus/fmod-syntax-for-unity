@@ -1,7 +1,7 @@
 using System;
-using UnityEngine;
-using UnityEditor;
 using System.IO;
+using UnityEditor;
+using UnityEngine;
 
 namespace RoyTheunissen.FMODSyntax
 {
@@ -13,10 +13,9 @@ namespace RoyTheunissen.FMODSyntax
     {
         private string settingsFolderPath = string.Empty;
         private string generatedScriptsFolderPath = "Generated/Scripts/FMOD";
-        
-        private string namespaceForGeneratedCode;
+
         private bool shouldGenerateAssemblyDefinition = true;
-        
+
         [NonSerialized] private GUIContent cachedFolderIcon;
         [NonSerialized] private bool didCacheFolderIcon;
         private GUIContent FolderIcon
@@ -29,7 +28,7 @@ namespace RoyTheunissen.FMODSyntax
                     string path = "Folder Icon";
                     if (EditorGUIUtility.isProSkin)
                         path = "d_" + path;
-                    
+
                     cachedFolderIcon = EditorGUIUtility.IconContent(path, string.Empty);
                 }
                 return cachedFolderIcon;
@@ -51,15 +50,8 @@ namespace RoyTheunissen.FMODSyntax
             {
                 SetupWizard setupWizard = GetWindow<SetupWizard>(true, "FMOD Syntax Setup Wizard");
                 setupWizard.minSize = setupWizard.maxSize = new Vector2(500, 270);
-                setupWizard.namespaceForGeneratedCode =
-                    $"{SanitizeNamespace(Application.companyName)}.{SanitizeNamespace(Application.productName)}.FMOD";
             };
 #endif // !AUDIO_SYNTAX_PACKAGE_DETECTED
-        }
-
-        private static string SanitizeNamespace(string @namespace)
-        {
-            return FmodSyntaxUtilities.Filter(@namespace, false);
         }
 
         private void OnGUI()
@@ -67,11 +59,11 @@ namespace RoyTheunissen.FMODSyntax
             EditorGUILayout.BeginHorizontal();
             EditorGUILayout.Space();
             EditorGUILayout.BeginVertical();
-            
+
             EditorGUILayout.Space();
-            
+
             EditorGUILayout.LabelField("Welcome! You've installed the FMOD Syntax package.");
-            
+
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Let's initialize the system with some default settings.");
             EditorGUILayout.Space();
@@ -79,17 +71,15 @@ namespace RoyTheunissen.FMODSyntax
             EditorGUILayout.BeginVertical("Box");
             EditorGUILayout.LabelField("Folders", EditorStyles.boldLabel);
 
-            settingsFolderPath = DrawFolderPathField(settingsFolderPath, "Settings Config", 
+            settingsFolderPath = DrawFolderPathField(settingsFolderPath, "Settings Config",
                 "Where to create the config file that has all the settings in it.");
 
-            generatedScriptsFolderPath = DrawFolderPathField(generatedScriptsFolderPath, "Generated Scripts", 
+            generatedScriptsFolderPath = DrawFolderPathField(generatedScriptsFolderPath, "Generated Scripts",
                 "Where to place the generated scripts for events and such.");
-            
+
             EditorGUILayout.Space();
 
             EditorGUILayout.LabelField("Code Formatting", EditorStyles.boldLabel);
-            namespaceForGeneratedCode = EditorGUILayout.TextField(
-                new GUIContent("Namespace", "The namespace to use for all generated code."), namespaceForGeneratedCode);
 
             GUIContent generateAsmdefLabel = new GUIContent(
                 "Make Assembly Definition",
@@ -98,36 +88,36 @@ namespace RoyTheunissen.FMODSyntax
                 "you may want to turn this off.");
             shouldGenerateAssemblyDefinition = EditorGUILayout.Toggle(
                 generateAsmdefLabel, shouldGenerateAssemblyDefinition);
-            
+
             EditorGUILayout.Space();
             EditorGUILayout.EndVertical();
-            
+
             EditorGUILayout.Space();
 
             bool shouldInitialize = GUILayout.Button("Initialize", GUILayout.Height(40));
             if (shouldInitialize)
                 InitializeFmodSyntaxSystem();
-            
+
             EditorGUILayout.Space();
-            
+
             EditorGUILayout.EndVertical();
-            
+
             EditorGUILayout.Space();
-            
+
             EditorGUILayout.EndHorizontal();
         }
-        
+
         private void InitializeFmodSyntaxSystem()
         {
             FmodSyntaxSettings settings = CreateScriptableObject<FmodSyntaxSettings>(
                 settingsFolderPath, nameof(FmodSyntaxSettings));
-            
+
             settings.InitializeFromWizard(
-                generatedScriptsFolderPath, namespaceForGeneratedCode, shouldGenerateAssemblyDefinition);
-            
+                generatedScriptsFolderPath, shouldGenerateAssemblyDefinition);
+
             EditorUtility.SetDirty(settings);
             AssetDatabase.SaveAssets();
-            
+
             Close();
         }
 
@@ -141,18 +131,18 @@ namespace RoyTheunissen.FMODSyntax
             Directory.CreateDirectory(absolutePath);
             AssetDatabase.Refresh();
         }
-        
+
         private static Type CreateScriptableObject<Type>(string path, string name)
             where Type : ScriptableObject
         {
             ScriptableObject scriptableObject = CreateInstance(typeof(Type));
             scriptableObject.name = name;
-            
+
             EnsureFolderExists(path);
 
             path = Path.Combine(path, name + ".asset");
             AssetDatabase.CreateAsset(scriptableObject, Path.Combine("Assets", path));
-            
+
             return (Type)scriptableObject;
         }
 
@@ -170,7 +160,7 @@ namespace RoyTheunissen.FMODSyntax
                 if (!string.IsNullOrEmpty(selectedFolder) && selectedFolder.StartsWith(Application.dataPath))
                 {
                     selectedFolder = selectedFolder.Substring(Application.dataPath.Length);
-                    
+
                     if (selectedFolder.StartsWith(Path.DirectorySeparatorChar) ||
                         selectedFolder.StartsWith(Path.AltDirectorySeparatorChar))
                     {
@@ -178,13 +168,13 @@ namespace RoyTheunissen.FMODSyntax
                     }
 
                     currentPath = selectedFolder;
-                    
+
                     EditorApplication.delayCall += Repaint;
                 }
             }
-            
+
             EditorGUILayout.EndHorizontal();
-            
+
             return currentPath;
         }
     }

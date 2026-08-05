@@ -1,2 +1,1 @@
 public static readonly VCA ##VCAName## = new VCA("##VCAPath##");
-

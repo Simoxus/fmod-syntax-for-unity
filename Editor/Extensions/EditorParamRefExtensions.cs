@@ -1,5 +1,7 @@
-using System;
 using FMODUnity;
+using System;
+using System.Linq;
+using System.Reflection;
 using UnityEngine;
 
 namespace RoyTheunissen.FMODSyntax
@@ -13,7 +15,7 @@ namespace RoyTheunissen.FMODSyntax
         {
             return FmodSyntaxUtilities.GetFilteredNameFromPath(parameter.Name);
         }
-        
+
         public static string GetArgumentName(this EditorParamRef parameter)
         {
             return FmodSyntaxUtilities.GetFilteredNameFromPathLowerCase(parameter.Name);
@@ -21,6 +23,23 @@ namespace RoyTheunissen.FMODSyntax
 
         public static bool HasNormalizedRange(this EditorParamRef parameter) =>
             Mathf.Approximately(parameter.Min, 0.0f) && Mathf.Approximately(parameter.Max, 1.0f);
+
+        /// <summary>
+        /// Checks whether the field that would be generated for this parameter (named via GetFilteredName) would
+        /// hide an inherited public instance member on the given base type (e.g. FmodPlayablePlaybackBase.Volume).
+        /// Used to decide whether the generated field needs the 'new' keyword to suppress CS0108.
+        /// </summary>
+        public static bool HidesBaseClassMember(this EditorParamRef parameter, Type baseType)
+        {
+            if (baseType == null)
+                return false;
+
+            string name = parameter.GetFilteredName();
+
+            return baseType
+                .GetMembers(BindingFlags.Public | BindingFlags.Instance)
+                .Any(m => m.Name == name);
+        }
 
         private static string GetLabelParameterTypeName(
             this EditorParamRef parameter, bool fullyQualified, EditorEventRef @event)
@@ -31,13 +50,13 @@ namespace RoyTheunissen.FMODSyntax
                 return userEnum.FullName;
 
             string type = $"{name}Values";
-            
+
             if (fullyQualified)
                 type = $"{@event.GetFilteredName()}Playback." + type;
 
             return type;
         }
-        
+
         public static string GetWrapperType(this EditorParamRef parameter)
         {
             switch (parameter.Type)
@@ -47,19 +66,19 @@ namespace RoyTheunissen.FMODSyntax
                 case ParameterType.Discrete:
                     return parameter.HasNormalizedRange() ? "ParameterBool" : "ParameterInt";
                 case ParameterType.Labeled:
-                {
+                    {
 #if SCRIPTABLE_OBJECT_COLLECTION
                     string name = parameter.GetFilteredName();
                     bool hasUserType = FmodCodeGenerator.GetUserSpecifiedLabelParameterType(name, out Type userType);
                     if (hasUserType && !typeof(Enum).IsAssignableFrom(userType))
                         return $"ParameterScriptableObjectCollectionItem<{parameter.GetLabelParameterTypeName(false, null)}>";
 #endif // SCRIPTABLE_OBJECT_COLLECTION
-                        
-                    return $"ParameterEnum<{parameter.GetLabelParameterTypeName(false, null)}>";
-                }
+
+                        return $"ParameterEnum<{parameter.GetLabelParameterTypeName(false, null)}>";
+                    }
             }
         }
-        
+
         public static string GetArgumentType(this EditorParamRef parameter)
         {
             switch (parameter.Type)
@@ -72,7 +91,7 @@ namespace RoyTheunissen.FMODSyntax
                     return $"{parameter.GetLabelParameterTypeName(false, null)}";
             }
         }
-        
+
         public static string GetArgumentTypeFullyQualified(this EditorParamRef parameter, EditorEventRef @event)
         {
             string type = parameter.GetArgumentType();

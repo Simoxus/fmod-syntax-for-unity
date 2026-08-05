@@ -4,4 +4,3 @@ public void Play(EventDescription eventDescription, Transform source, ##Paramete
     
     ##ParameterInitializationsFromArguments##
 }
-

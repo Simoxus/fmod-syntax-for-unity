@@ -1,14 +1,10 @@
 {
-    "name": "RoyTheunissen.FMODSyntax.Editor",
+    "name": "FMODSyntax.Runtime",
     "rootNamespace": "RoyTheunissen.FMODSyntax",
     "references": [
-        "GUID:f28b76e6ba53ea24ca2daf55c1581312",
-        "GUID:0c752da273b17c547ae705acf0f2adf2",
-        "GUID:aab3caaf43456d6449a3e035348ff798"
+        "FMODUnity"
     ],
-    "includePlatforms": [
-        "Editor"
-    ],
+    "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": false,
@@ -20,11 +16,6 @@
             "name": "com.brunomikoski.scriptableobjectcollection",
             "expression": "2.2.1",
             "define": "SCRIPTABLE_OBJECT_COLLECTION"
-        },
-        {
-            "name": "com.roytheunissen.audio-syntax",
-            "expression": "0.2.5",
-            "define": "AUDIO_SYNTAX_PACKAGE_DETECTED"
         }
     ],
     "noEngineReferences": false

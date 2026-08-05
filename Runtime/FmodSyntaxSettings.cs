@@ -12,7 +12,7 @@ namespace RoyTheunissen.FMODSyntax
     /// <summary>
     /// Scriptable object that holds all the settings for the FMOD Syntax system.
     /// </summary>
-    public sealed class FmodSyntaxSettings : ScriptableObject 
+    public sealed class FmodSyntaxSettings : ScriptableObject
     {
         public enum SyntaxFormats
         {
@@ -20,22 +20,19 @@ namespace RoyTheunissen.FMODSyntax
             FlatWithPathIncludedInName = 1,
             SubclassesPerFolder = 2,
         }
-        
+
         [SerializeField] private string generatedScriptsFolderPath;
         public string GeneratedScriptsFolderPath => generatedScriptsFolderPath;
 
-        [SerializeField] private string namespaceForGeneratedCode;
-        public string NamespaceForGeneratedCode => namespaceForGeneratedCode;
-        
         [SerializeField] private bool shouldGenerateAssemblyDefinition;
         public bool ShouldGenerateAssemblyDefinition => shouldGenerateAssemblyDefinition;
-        
+
         [FormerlySerializedAs("generateFallbacksForMissingEvents")]
         [Tooltip("If specified, renamed or moved events will first generate an 'alias' so that any existing " +
                  "references so you can update the references without getting compile errors.")]
         [SerializeField] private bool generateFallbacksForChangedEvents = true;
         public bool GenerateFallbacksForChangedEvents => generateFallbacksForChangedEvents;
-        
+
         [Space]
         [Tooltip("How to format the events syntax. Different formats suit different use cases:\n\n" +
                  "Flat - Simplest syntax. All events are inside a class called AudioEvents. Event names have to be unique.\n\n" +
@@ -71,15 +68,13 @@ namespace RoyTheunissen.FMODSyntax
         }
 
         public void InitializeFromWizard(
-            string generatedScriptsFolderPath, string namespaceForGeneratedCode, bool shouldGenerateAssemblyDefinition)
+            string generatedScriptsFolderPath, bool shouldGenerateAssemblyDefinition)
         {
             // Sanitize the generated scripts folder path.
             this.generatedScriptsFolderPath = generatedScriptsFolderPath.Replace(
                 Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
             if (!this.generatedScriptsFolderPath.EndsWith(Path.AltDirectorySeparatorChar))
                 this.generatedScriptsFolderPath += Path.AltDirectorySeparatorChar;
-            
-            this.namespaceForGeneratedCode = namespaceForGeneratedCode;
 
             this.shouldGenerateAssemblyDefinition = shouldGenerateAssemblyDefinition;
         }

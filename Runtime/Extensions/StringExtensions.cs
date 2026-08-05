@@ -9,7 +9,7 @@ namespace RoyTheunissen.FMODSyntax
         private const string HungarianPrefix = "m_";
         private const char Underscore = '_';
         public const char DefaultSeparator = ' ';
-        
+
         private static readonly char[] DirectorySeparators = { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar };
 
         private static bool IsExcludedSymbol(char symbol, char wordSeparator = DefaultSeparator)
@@ -22,33 +22,83 @@ namespace RoyTheunissen.FMODSyntax
             if (string.IsNullOrEmpty(text))
                 return text;
 
-            // Split the text up into separate words first then fix spaces and change captialization.
+            // Split the text up into separate words first then fix spaces and change capitalization.
             text = text.ToHumanReadable(wordSeparator);
 
-            string camelText = string.Empty;
-            for (int i = 0; i < text.Length; i++)
-            {
-                // Separators cause the next character to be capitalized.
-                if (char.IsWhiteSpace(text[i]) || text[i] == wordSeparator)
-                {
-                    // Non-whitespace separators are allowed through.
-                    if (!char.IsWhiteSpace(text[i]))
-                        camelText += text[i];
+            System.Text.StringBuilder result = new System.Text.StringBuilder(text.Length);
+            System.Text.StringBuilder currentWord = new System.Text.StringBuilder();
+            bool isFirstWord = true;
 
-                    // If there is a character after the whitespace, add that as capitalized.
-                    if (i + 1 < text.Length)
+            for (int i = 0; i <= text.Length; i++)
+            {
+                bool atEnd = i == text.Length;
+                char c = atEnd ? '\0' : text[i];
+                bool isSeparator = !atEnd && (char.IsWhiteSpace(c) || c == wordSeparator);
+
+                if (atEnd || isSeparator)
+                {
+                    if (currentWord.Length > 0)
                     {
-                        i++;
-                        camelText += char.ToUpper(text[i]);
+                        result.Append(FormatWord(currentWord.ToString(), isFirstWord));
+                        isFirstWord = false;
+                        currentWord.Clear();
                     }
+
+                    // Non-whitespace separators (e.g. a literal underscore passed in as wordSeparator) are
+                    // preserved in the output, matching the previous behavior.
+                    if (isSeparator && !char.IsWhiteSpace(c))
+                        result.Append(c);
 
                     continue;
                 }
 
-                camelText += char.ToLower(text[i]);
+                currentWord.Append(c);
             }
 
-            return camelText;
+            return result.ToString();
+        }
+
+        /// <summary>
+        /// Formats a single word for camel/Pascal casing. Acronym-like words (e.g. "UI", "SCPs" — a run of
+        /// two or more uppercase letters, optionally followed by a trailing lowercase "s" for a plural) are
+        /// preserved exactly as-is instead of being lowercased, so folder/class names like "UI" and "SCPs"
+        /// don't get mangled into "Ui" and "ScPs". Non-acronym words get standard title-casing, except the
+        /// very first word is lowercased entirely to preserve existing camelCase behavior.
+        /// </summary>
+        private static string FormatWord(string word, bool isFirstWord)
+        {
+            if (IsAcronym(word))
+                return word;
+
+            char firstChar = isFirstWord ? char.ToLower(word[0]) : char.ToUpper(word[0]);
+            return word.Length == 1 ? firstChar.ToString() : firstChar + word.Substring(1).ToLower();
+        }
+
+        /// <summary>
+        /// Returns true if the word is a run of 2+ uppercase letters, optionally with one trailing
+        /// lowercase "s" (to allow plural acronyms like "SCPs").
+        /// </summary>
+        private static bool IsAcronym(string word)
+        {
+            if (string.IsNullOrEmpty(word))
+                return false;
+
+            int upperCount = 0;
+            for (int i = 0; i < word.Length; i++)
+            {
+                char c = word[i];
+                bool isLastChar = i == word.Length - 1;
+
+                if (isLastChar && c == 's' && upperCount >= 2)
+                    continue;
+
+                if (!char.IsUpper(c))
+                    return false;
+
+                upperCount++;
+            }
+
+            return upperCount >= 2;
         }
 
         public static string ToPascalCasing(this string text, char wordSeparator = DefaultSeparator)
@@ -103,15 +153,9 @@ namespace RoyTheunissen.FMODSyntax
                     && !(IsExcludedSymbol(programmerText[i], wordSeparator) ||
                          IsExcludedSymbol(programmerText[i - 1], wordSeparator)))
                 {
-                    // Upper case to lower case.
-                    // I added this so that something like 'GUIItem' turns into 'GUI Item', but that 
-                    // means we have to make sure that no symbols are involved. Also check that there 
-                    // isn't already a space where we want to add a space. Don't want to double space.
                     if (wasUpperCase && i > 1 && !IsExcludedSymbol(programmerText[i - 1], wordSeparator)
                         && !IsExcludedSymbol(result[result.Length - 2], wordSeparator))
                     {
-                        // From letter to letter means we have to insert a space one character back.
-                        // Otherwise it's going from a letter to a symbol and we can just add a space.
                         if (wasLetter && char.IsLetter(programmerText[i]))
                             result = result.Insert(result.Length - 1, wordSeparator.ToString());
                         else
@@ -226,7 +270,7 @@ namespace RoyTheunissen.FMODSyntax
 
             return text.Substring(fromIndex, toIndex - fromIndex);
         }
-        
+
         public static string GetParentDirectory(this string path)
         {
             int lastDirectorySeparator = path.LastIndexOfAny(DirectorySeparators);

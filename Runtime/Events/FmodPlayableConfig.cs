@@ -1,21 +1,21 @@
-using System;
 using FMOD;
 using FMOD.Studio;
 using FMODUnity;
+using System;
 
 namespace RoyTheunissen.FMODSyntax
 {
-    /// <summary>
-    /// Base class for configs of Playables (Events and Snapshots).
-    /// </summary>
     public abstract class FmodPlayableConfig
     {
         [NonSerialized] private GUID id;
         public string Id => id.ToString();
-        
+
         /// <summary>
-        /// NOTE: Seems like we can't cache this for some reason that's related to domain reloading. Not sure yet why.
+        /// Exposes this config's underlying event as an EventReference so it can be passed to APIs
+        /// that expect one, such as FMODHelper.
         /// </summary>
+        public EventReference Event => new EventReference { Guid = id };
+
         protected EventDescription EventDescription => RuntimeManager.GetEventDescription(id);
 
         public string Path
@@ -40,7 +40,7 @@ namespace RoyTheunissen.FMODSyntax
         {
             EventDescription.loadSampleData();
         }
-        
+
         public void Unload()
         {
             EventDescription.unloadSampleData();

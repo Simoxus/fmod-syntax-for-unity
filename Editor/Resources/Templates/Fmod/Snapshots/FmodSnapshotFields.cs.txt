@@ -1,2 +1,1 @@
 public static readonly FmodSnapshotConfig ##SnapshotName## = new FmodSnapshotConfig("##GUID##");
-

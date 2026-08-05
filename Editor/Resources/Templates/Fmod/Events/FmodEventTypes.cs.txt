@@ -1,10 +1,7 @@
 ##UsingDirectives##
 
-namespace ##Namespace##
-{
-    /// <summary>
-    /// GENERATED: Contains definition of FMOD events which is separated out from the declaration for readability.
-    /// To get an overview of which folders and events exist see 'FmodEvents.cs'
-    /// </summary>
-    ##Events##
-}
+/// <summary>
+/// GENERATED: Contains definition of FMOD events which is separated out from the declaration for readability.
+/// To get an overview of which folders and events exist see 'FmodEvents.cs'
+/// </summary>
+##Events##

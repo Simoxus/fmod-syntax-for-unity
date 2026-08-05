@@ -1,12 +1,13 @@
+using FMOD.Studio;
+using FMODUnity;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using UnityEditor;
 using System.Linq;
-using FMOD.Studio;
-using FMODUnity;
+using System.Reflection;
+using System.Text.RegularExpressions;
+using UnityEditor;
 using UnityEngine;
-using UnityEngine.Serialization;
 
 namespace RoyTheunissen.FMODSyntax
 {
@@ -36,12 +37,12 @@ namespace RoyTheunissen.FMODSyntax
 
             private EventFolder GetOrCreateSubfolder(string name)
             {
-                EventFolder existingFolder = 
+                EventFolder existingFolder =
                     childFolders.FirstOrDefault(folder => string.Equals(folder.Name, name, StringComparison.Ordinal));
-                
+
                 if (existingFolder != null)
                     return existingFolder;
-                
+
                 EventFolder newFolder = new EventFolder(name);
                 childFolders.Add(newFolder);
                 childFolders.Sort((x, y) => String.Compare(x.name, y.name, StringComparison.Ordinal));
@@ -52,7 +53,7 @@ namespace RoyTheunissen.FMODSyntax
             {
                 string[] pathSections = path.Split("/");
                 EventFolder currentFolder = this;
-                
+
                 // NOTE: The last section of the path is the event name.
                 for (int i = 0; i < pathSections.Length - 1; i++)
                 {
@@ -67,7 +68,7 @@ namespace RoyTheunissen.FMODSyntax
                 return $"{nameof(EventFolder)}({Name})";
             }
         }
-        
+
         [Serializable]
         public sealed class MetaData
         {
@@ -78,11 +79,12 @@ namespace RoyTheunissen.FMODSyntax
             public FmodSyntaxSettings.SyntaxFormats SyntaxFormat => syntaxFormat;
 
             [SerializeField] private string[] eventGuidToPreviousSyntaxPaths = Array.Empty<string>();
-            
-            [NonSerialized] private Dictionary<string,string> cachedEventGuidToPreviousSyntaxPathDictionary
+
+            [NonSerialized]
+            private Dictionary<string, string> cachedEventGuidToPreviousSyntaxPathDictionary
                 = new Dictionary<string, string>();
             [NonSerialized] private bool didCacheEventGuidToPreviousSyntaxPathDictionary;
-            public Dictionary<string,string> EventGuidToPreviousSyntaxPath
+            public Dictionary<string, string> EventGuidToPreviousSyntaxPath
             {
                 get
                 {
@@ -100,7 +102,7 @@ namespace RoyTheunissen.FMODSyntax
                 }
                 set
                 {
-                    List<string> previousEventSyntaxPathValues = new List<string>(); 
+                    List<string> previousEventSyntaxPathValues = new List<string>();
                     foreach (KeyValuePair<string, string> stringPair in value)
                     {
                         previousEventSyntaxPathValues.Add(stringPair.Key);
@@ -137,26 +139,26 @@ namespace RoyTheunissen.FMODSyntax
             ActiveEventGuids, // The old format that just specified which events are currently being used and their name
             Json,             // The new format that still stores old event data but also supports storing additional data
         }
-        
+
         private static string ScriptPathBase => FmodSyntaxSettings.Instance.GeneratedScriptsFolderPath;
         private const string TemplatePathBase = "Templates/Fmod/";
-        
-        private static string EventsScriptPath => ScriptPathBase + "FmodEvents.cs";
-        private static string EventTypesScriptPath => ScriptPathBase + "FmodEventTypes.cs";
+
+        private static string EventsScriptPath => ScriptPathBase + "FmodEvents.g.cs";
+        private static string EventTypesScriptPath => ScriptPathBase + "FmodEventTypes.g.cs";
         private const string EventsTemplatePath = TemplatePathBase + "Events/";
-        
-        private static string BanksScriptPath => ScriptPathBase + "FmodBanks.cs";
+
+        private static string BanksScriptPath => ScriptPathBase + "FmodBanks.g.cs";
         private const string BanksTemplatePath = TemplatePathBase + "Banks/";
-        
-        private static string BusesScriptPath => ScriptPathBase + "FmodBuses.cs";
+
+        private static string BusesScriptPath => ScriptPathBase + "FmodBuses.g.cs";
         private const string BusesTemplatePath = TemplatePathBase + "Buses/";
-        
+
         private const string SnapshotsTemplatePath = TemplatePathBase + "Snapshots/";
-        
-        private static string SnapshotsScriptPath => ScriptPathBase + "FmodSnapshots.cs";
-        private static string SnapshotTypesScriptPath => ScriptPathBase + "FmodSnapshotTypes.cs";
-        
-        private static string VCAsScriptPath => ScriptPathBase + "FmodVCAs.cs";
+
+        private static string SnapshotsScriptPath => ScriptPathBase + "FmodSnapshots.g.cs";
+        private static string SnapshotTypesScriptPath => ScriptPathBase + "FmodSnapshotTypes.g.cs";
+
+        private static string VCAsScriptPath => ScriptPathBase + "FmodVCAs.g.cs";
         private const string VCAsTemplatePath = TemplatePathBase + "VCAs/";
 
         private static readonly CodeGenerator assemblyDefinitionGenerator =
@@ -180,28 +182,28 @@ namespace RoyTheunissen.FMODSyntax
             new CodeGenerator(EventsTemplatePath + "FmodEventConfigPlayMethodWithParameters.cs");
         private static readonly CodeGenerator eventPlaybackPlayMethodWithParametersGenerator =
             new CodeGenerator(EventsTemplatePath + "FmodEventPlaybackPlayMethodWithParameters.cs");
-        
+
         private static readonly CodeGenerator eventFolderGenerator =
             new CodeGenerator(EventsTemplatePath + "FmodEventFolder.cs");
 
         private static readonly CodeGenerator enumGenerator = new CodeGenerator(EventsTemplatePath + "FmodEnum.cs");
-        
-        private static string GlobalParametersScriptPath => ScriptPathBase + "FmodGlobalParameters.cs";
+
+        private static string GlobalParametersScriptPath => ScriptPathBase + "FmodGlobalParameters.g.cs";
         private static readonly CodeGenerator globalParametersGenerator =
             new CodeGenerator(EventsTemplatePath + "FmodGlobalParameters.cs");
         private static readonly CodeGenerator globalParameterGenerator =
             new CodeGenerator(EventsTemplatePath + "FmodGlobalParameter.cs");
-        
+
         private static readonly CodeGenerator banksScriptGenerator =
             new CodeGenerator(BanksTemplatePath + "FmodBanks.cs");
         private static readonly CodeGenerator bankFieldGenerator =
             new CodeGenerator(BanksTemplatePath + "FmodBankField.cs");
-        
+
         private static readonly CodeGenerator busesScriptGenerator =
             new CodeGenerator(BusesTemplatePath + "FmodBuses.cs");
         private static readonly CodeGenerator busFieldGenerator =
             new CodeGenerator(BusesTemplatePath + "FmodBusField.cs");
-        
+
         private static readonly CodeGenerator snapshotsScriptGenerator =
             new CodeGenerator(SnapshotsTemplatePath + "FmodSnapshots.cs");
         private static readonly CodeGenerator snapshotTypesScriptGenerator =
@@ -210,21 +212,22 @@ namespace RoyTheunissen.FMODSyntax
             new CodeGenerator(SnapshotsTemplatePath + "FmodSnapshotType.cs");
         private static readonly CodeGenerator snapshotFieldsGenerator =
             new CodeGenerator(SnapshotsTemplatePath + "FmodSnapshotFields.cs");
-        
+
         private static readonly CodeGenerator vcasScriptGenerator =
             new CodeGenerator(VCAsTemplatePath + "FmodVCAs.cs");
         private static readonly CodeGenerator vcaFieldGenerator =
             new CodeGenerator(VCAsTemplatePath + "FmodVCAField.cs");
-        
+
         private const string RefactorOldEventReferencesMenuPath = "FMOD/Refactor Old Event References";
 
         private static EventFolder rootEventFolder;
-        
+
         private static FmodSyntaxSettings Settings => FmodSyntaxSettings.Instance;
-        
+
         [NonSerialized] private static List<string> eventUsingDirectives = new List<string>();
         [NonSerialized] private static string eventUsingDirectivesCode;
-        [NonSerialized] private static string[] eventUsingDirectivesDefault =
+        [NonSerialized]
+        private static string[] eventUsingDirectivesDefault =
         {
             "System",
             "System.Collections.Generic",
@@ -235,9 +238,9 @@ namespace RoyTheunissen.FMODSyntax
         };
 
         [NonSerialized] private static bool didSourceFilesChange;
-        
+
         [NonSerialized] private static string parameterlessEventsCode = "";
-        
+
         [NonSerialized] private static string rawMetaDataFromPreviousCodeGeneration;
         [NonSerialized] private static MetaDataFormats metaDataFormatFromPreviousCodeGeneration;
         [NonSerialized] private static MetaData metaDataFromPreviousCodeGeneration;
@@ -253,10 +256,11 @@ namespace RoyTheunissen.FMODSyntax
 
         [NonSerialized]
         private static Dictionary<string, string> activeEventGuidToCurrentSyntaxPath = new Dictionary<string, string>();
-        
+
         private static Dictionary<string, string> detectedEventChanges = new Dictionary<string, string>();
-        
-        [NonSerialized] private static readonly Dictionary<string, Type> labelParameterNameToUserSpecifiedType 
+
+        [NonSerialized]
+        private static readonly Dictionary<string, Type> labelParameterNameToUserSpecifiedType
             = new Dictionary<string, Type>();
         [NonSerialized] private static bool didCacheUserSpecifiedEnums;
 
@@ -300,14 +304,14 @@ namespace RoyTheunissen.FMODSyntax
             GenerateCode();
         }
 #endif // FMOD_AUTO_REGENERATE_CODE
-        
+
         private static void CacheUserSpecifiedLabelParameterTypes()
         {
             if (didCacheUserSpecifiedEnums)
                 return;
 
             didCacheUserSpecifiedEnums = true;
-            
+
             labelParameterNameToUserSpecifiedType.Clear();
             Type[] userSpecifiedTypes = TypeExtensions.GetAllTypesWithAttribute<FmodLabelTypeAttribute>();
             for (int i = 0; i < userSpecifiedTypes.Length; i++)
@@ -333,7 +337,7 @@ namespace RoyTheunissen.FMODSyntax
         public static bool GetUserSpecifiedLabelParameterType(string name, out Type enumType)
         {
             CacheUserSpecifiedLabelParameterTypes();
-            
+
             return labelParameterNameToUserSpecifiedType.TryGetValue(name, out enumType);
         }
 
@@ -374,7 +378,7 @@ namespace RoyTheunissen.FMODSyntax
                     enumGenerator.ReplaceKeyword("Name", $"{name}Values");
                     enumGenerator.ReplaceKeyword("Values", enumValues);
                     string enumCode = enumGenerator.GetCode();
-                    
+
                     codeGenerator.ReplaceKeyword(enumKeyword, enumCode);
                 }
             }
@@ -383,7 +387,7 @@ namespace RoyTheunissen.FMODSyntax
                 // If there's no enum then we can just get rid of that keyword.
                 codeGenerator.RemoveKeywordLines(enumKeyword);
             }
-                
+
             return codeGenerator.GetCode();
         }
 
@@ -393,7 +397,7 @@ namespace RoyTheunissen.FMODSyntax
             string packageJsonAssetPath = AssetDatabase.GUIDToAssetPath("9381d3b6ee2b4dc47a6dccb6aacaed4a");
             TextAsset packageJsonFile = AssetDatabase.LoadAssetAtPath<TextAsset>(packageJsonAssetPath);
             string packageJson = packageJsonFile.text;
-            
+
             // Try to find the part where it starts defining the version.
             const string versionStartSyntax = "\"version\": \"";
             int versionStartIndex = packageJson.IndexOf(versionStartSyntax, StringComparison.OrdinalIgnoreCase);
@@ -413,14 +417,14 @@ namespace RoyTheunissen.FMODSyntax
         private static string GetRawMetaDataFromEventsScript(out MetaDataFormats format)
         {
             format = MetaDataFormats.None;
-            
+
             // If a script has already been generated, open it.
             string existingFilePath = EventsScriptPath.GetAbsolutePath();
             if (!File.Exists(existingFilePath))
                 return string.Empty;
 
             string existingCode = File.ReadAllText(existingFilePath);
-            
+
             // Check that there's a section with existing events by GUID. This is the old format for metadata.
             const string oldMetaDataStart = "/* ACTIVE EVENT GUIDS";
             const string oldMetaDataEnd = "ACTIVE EVENT GUIDS */";
@@ -428,7 +432,7 @@ namespace RoyTheunissen.FMODSyntax
             if (!string.IsNullOrEmpty(activeEventGuidsSection))
             {
                 format = MetaDataFormats.ActiveEventGuids;
-                
+
                 string[] lines = activeEventGuidsSection.Split("\r\n");
                 List<string> linesList = lines.ToList();
                 // Skip the first line because it just has some explanation for what it's for.
@@ -438,10 +442,10 @@ namespace RoyTheunissen.FMODSyntax
                 if (linesList.Count > 0)
                     linesList.RemoveAt(linesList.Count - 1);
                 activeEventGuidsSection = string.Join("\r\n", linesList);
-                
+
                 return activeEventGuidsSection;
             }
-            
+
             // Now check the new format.
             const string newMetaDataStart = "/* ---------------------------------------------- METADATA ------------------------------------------------------";
             const string newMetaDataEnd = "------------------------------------------------- METADATA --------------------------------------------------- */";
@@ -459,7 +463,7 @@ namespace RoyTheunissen.FMODSyntax
         {
             rawMetaDataFromPreviousCodeGeneration = GetRawMetaDataFromEventsScript(
                 out metaDataFormatFromPreviousCodeGeneration);
-            
+
             if (metaDataFormatFromPreviousCodeGeneration == MetaDataFormats.None)
             {
                 // Metadata could not be found. Just assume the default empty metadata.
@@ -470,11 +474,11 @@ namespace RoyTheunissen.FMODSyntax
                 // The metadata was in the old format. This one did not support name different syntax format nor did
                 // it specify a version number; just event GUIDs and their previous name.
                 string version = "0.0.1";
-                
+
                 FmodSyntaxSettings.SyntaxFormats syntaxFormat = FmodSyntaxSettings.SyntaxFormats.Flat;
-                
+
                 Dictionary<string, string> eventGuidToPreviousSyntaxPath = GetExistingEventSyntaxPathsByGuid();
-                
+
                 metaDataFromPreviousCodeGeneration = new MetaData(
                     version, syntaxFormat, eventGuidToPreviousSyntaxPath);
             }
@@ -489,7 +493,7 @@ namespace RoyTheunissen.FMODSyntax
         private static Dictionary<string, string> GetExistingEventSyntaxPathsByGuid()
         {
             Dictionary<string, string> existingEventPathsByGuid = new Dictionary<string, string>();
-            
+
             // Every line is an individual event formatted as path=guid
             string[] lines = rawMetaDataFromPreviousCodeGeneration.Split("\r\n");
             for (int i = 0; i < lines.Length; i++)
@@ -498,24 +502,24 @@ namespace RoyTheunissen.FMODSyntax
                 string[] nameAndGuid = line.Split("=");
                 if (nameAndGuid.Length != 2)
                     continue;
-                        
+
                 string path = nameAndGuid[0];
                 string guid = nameAndGuid[1];
-                        
+
                 existingEventPathsByGuid.Add(guid, path);
             }
 
             return existingEventPathsByGuid;
         }
-        
+
         private static string GetEventTypeCode(CodeGenerator generator, EditorEventRef e, string eventName = "", string attribute = "")
         {
             if (string.IsNullOrEmpty(eventName))
                 eventName = GetEventSyntaxName(e);
-            
+
             generator.Reset();
             generator.ReplaceKeyword(EventNameKeyword, eventName);
-            
+
             // Parameters
             GetEventTypeParametersCode(generator, e, eventName);
 
@@ -524,7 +528,7 @@ namespace RoyTheunissen.FMODSyntax
                 generator.RemoveKeywordLines(attributesKeyword);
             else
                 generator.ReplaceKeyword(attributesKeyword, attribute);
-            
+
             return generator.GetCode();
         }
 
@@ -532,7 +536,7 @@ namespace RoyTheunissen.FMODSyntax
         {
             const string eventParametersKeyword = "EventParameters";
             const string configPlayMethodWithParametersKeyword = "ConfigPlayMethodWithParameters";
-            
+
             // If there's no parameters for this event then we can just get rid of the keywords and leave it there.
             if (e.LocalParameters.Count <= 0)
             {
@@ -564,7 +568,7 @@ namespace RoyTheunissen.FMODSyntax
                 }
 
                 validParameterCount++;
-                
+
                 // Define a new local parameter for this event.
                 eventParametersCode += GetParameterCode(eventParameterGenerator, parameter);
 
@@ -583,7 +587,7 @@ namespace RoyTheunissen.FMODSyntax
                 parameterInitializationsFromArguments +=
                     $"{parameterName}.Value = {argumentName};\r\n";
             }
-            
+
             // Actually no valid parameters were found. Ignore it after all.
             if (validParameterCount <= 0)
             {
@@ -625,7 +629,7 @@ namespace RoyTheunissen.FMODSyntax
                     "ParameterArgumentsWithType", parameterArgumentsWithTypeFullyQualified);
                 eventConfigPlayMethodWithParametersGenerator.ReplaceKeyword(
                     "ParameterArguments", parameterArguments);
-                
+
                 generator.ReplaceKeyword(
                     configPlayMethodWithParametersKeyword,
                     eventConfigPlayMethodWithParametersGenerator.GetCode());
@@ -634,10 +638,10 @@ namespace RoyTheunissen.FMODSyntax
             {
                 generator.RemoveKeywordLines(configPlayMethodWithParametersKeyword);
             }
-            
+
             generator.ReplaceKeyword(eventParametersKeyword, eventParametersCode);
         }
-        
+
         /// <summary>
         /// Gets the name of an event *as it is represented in the AudioEvents syntax*. For example, here's an event
         /// called Core/Player/Footstep for different Syntax Formats:
@@ -650,15 +654,15 @@ namespace RoyTheunissen.FMODSyntax
             // If specified, include the entire path as a prefix.
             if (Settings.SyntaxFormat == FmodSyntaxSettings.SyntaxFormats.FlatWithPathIncludedInName)
                 return filteredPath.Replace("_", "").Replace("/", "_");
-            
+
             return FmodSyntaxUtilities.GetFilteredNameFromPath(filteredPath);
         }
-        
+
         private static string GetEventSyntaxName(EditorEventRef e)
         {
             return GetEventSyntaxName(e.GetFilteredPath(true));
         }
-        
+
         /// <summary>
         /// Gets the path of an event *as it is represented in the AudioEvents syntax*. For example, here's an event
         /// called Core/Player/Footstep for different Syntax Formats:
@@ -669,15 +673,15 @@ namespace RoyTheunissen.FMODSyntax
         private static string GetEventSyntaxPath(string filteredPath)
         {
             string eventName = GetEventSyntaxName(filteredPath);
-            
+
             if (Settings.SyntaxFormat !=
                 FmodSyntaxSettings.SyntaxFormats.SubclassesPerFolder)
             {
                 return eventName;
             }
-            
+
             string eventDirectories = Path.GetDirectoryName(filteredPath);
-            
+
             return Path.Combine(eventDirectories, eventName).ToUnityPath().Replace("/", ".");
         }
 
@@ -694,18 +698,18 @@ namespace RoyTheunissen.FMODSyntax
             if (string.IsNullOrEmpty(eventName))
                 eventName = GetEventSyntaxName(e);
             string fieldName = FmodSyntaxUtilities.GetFilteredNameFromPathLowerCase(eventName);
-            
+
             eventFieldGenerator.Reset();
             eventFieldGenerator.ReplaceKeyword(EventNameKeyword, eventName);
             eventFieldGenerator.ReplaceKeyword("eventName", fieldName);
             eventFieldGenerator.ReplaceKeyword("GUID", e.Guid.ToString());
-            
+
             // Aliases have an Obsolete attribute, normal events don't and can just remove the keyword.
             if (string.IsNullOrEmpty(attribute))
                 eventFieldGenerator.RemoveKeywordLines("Attributes");
             else
                 eventFieldGenerator.ReplaceKeyword("Attributes", attribute);
-            
+
             return eventFieldGenerator.GetCode();
         }
 
@@ -723,7 +727,7 @@ namespace RoyTheunissen.FMODSyntax
             if (startIndex == -1)
                 return json;
             startIndex += dictionaryStartKeyword.Length;
-            
+
             // Find out where the dictionary ends.
             int endIndex = json.IndexOf("]", startIndex + 1, StringComparison.Ordinal);
             if (endIndex == -1)
@@ -733,11 +737,11 @@ namespace RoyTheunissen.FMODSyntax
             string preDictionarySection = json.Substring(0, startIndex);
             string dictionarySection = json.Substring(startIndex, endIndex - startIndex);
             string postDictionarySection = json.Substring(endIndex);
-            
+
             // Now let's clean up the dictionary section.
             string[] dictionarySectionLines = dictionarySection.Split("\n");
             List<string> combinedDictionarySectionLines = new List<string>();
-            
+
             // NOTE: The last line is empty so skip that one.
             for (int i = 0; i < dictionarySectionLines.Length; i += 2)
             {
@@ -747,11 +751,11 @@ namespace RoyTheunissen.FMODSyntax
                     combinedDictionarySectionLines.Add(dictionarySectionLines[i]);
                     break;
                 }
-                
+
                 // Find out what the key and value are.
                 string key = dictionarySectionLines[i];
                 string value = dictionarySectionLines[i + 1];
-                
+
                 // Now combine them in such a way that there is no linebreak between them, just a space.
                 // Preserve existing indentation.
                 key = key.TrimEnd();
@@ -760,7 +764,7 @@ namespace RoyTheunissen.FMODSyntax
                 combinedDictionarySectionLines.Add(combinedLine);
             }
             dictionarySection = string.Join("\n", combinedDictionarySectionLines);
-            
+
             return preDictionarySection + dictionarySection + postDictionarySection;
         }
 
@@ -773,9 +777,9 @@ namespace RoyTheunissen.FMODSyntax
 
             if (Settings.ShouldGenerateAssemblyDefinition)
                 GenerateAssemblyDefinition();
-            
+
             detectedEventChanges.Clear();
-            
+
             GenerateEventsScript(true, EventsScriptPath, EditorEventRefExtensions.EventPrefix,
                 eventsScriptGenerator, eventTypeGenerator, EventContainerClass);
             GenerateEventsScript(false, EventTypesScriptPath, EditorEventRefExtensions.EventPrefix,
@@ -785,17 +789,14 @@ namespace RoyTheunissen.FMODSyntax
                 snapshotsScriptGenerator, snapshotTypeGenerator, SnapshotContainerClass);
             GenerateEventsScript(false, SnapshotTypesScriptPath, EditorEventRefExtensions.SnapshotPrefix,
                 snapshotTypesScriptGenerator, snapshotTypeGenerator, SnapshotContainerClass);
-            
+
             // NOTE: This re-uses the using directives from the generated events. Therefore this should be called after
             // the events are generated.
             GenerateGlobalParametersScript();
-            
+
             GenerateMiscellaneousScripts();
 
             StorePreviousMetaData();
-
-            if (detectedEventChanges.Count > 0)
-                TryRefactoringOldEventReferencesInternal(false);
         }
 
         private static void LoadPreviousMetaData()
@@ -824,25 +825,26 @@ namespace RoyTheunissen.FMODSyntax
                     File.Delete(PreviousMetaDataFilePath);
                 return;
             }
-            
+
             string metaDataFromPreviousCodeGenerationJson = metaDataFromPreviousCodeGeneration.GetJson();
-            
+
             string path = PreviousMetaDataFilePath;
-            
+
             string directory = Path.GetDirectoryName(path);
             Directory.CreateDirectory(directory);
-            
+
             File.WriteAllText(path, metaDataFromPreviousCodeGenerationJson);
         }
 
         private static void GenerateAssemblyDefinition()
         {
             assemblyDefinitionGenerator.Reset();
-            
-            assemblyDefinitionGenerator.ReplaceKeyword("Name", Settings.NamespaceForGeneratedCode);
-            assemblyDefinitionGenerator.ReplaceKeyword("Namespace", Settings.NamespaceForGeneratedCode);
-            
-            assemblyDefinitionGenerator.GenerateFile(ScriptPathBase + $"{Settings.NamespaceForGeneratedCode}.asmdef");
+
+            // No namespace is used for the generated code anymore, but the assembly definition still needs a name.
+            const string generatedAssemblyName = "FMOD-Syntax-Generated";
+            assemblyDefinitionGenerator.ReplaceKeyword("Name", generatedAssemblyName);
+
+            assemblyDefinitionGenerator.GenerateFile(ScriptPathBase + $"{generatedAssemblyName}.asmdef");
         }
 
         private static void GenerateGlobalParametersScript()
@@ -853,14 +855,13 @@ namespace RoyTheunissen.FMODSyntax
             {
                 globalParametersCode += GetParameterCode(globalParameterGenerator, parameter);
             }
-            
+
             globalParametersGenerator.Reset();
-            globalParametersGenerator.ReplaceKeyword("Namespace", Settings.NamespaceForGeneratedCode);
-            
+
             // NOTE: This re-uses the using directives from the generated events. Therefore this should be called after
             // the events are generated.
             globalParametersGenerator.ReplaceKeyword("UsingDirectives", eventUsingDirectivesCode);
-            
+
             globalParametersGenerator.ReplaceKeyword("GlobalParameters", globalParametersCode);
             globalParametersGenerator.GenerateFile(GlobalParametersScriptPath);
         }
@@ -875,8 +876,6 @@ namespace RoyTheunissen.FMODSyntax
             // files makes it easier to just have a look at which events were generated at all.
             //CodeGenerator codeGenerator = isFields ? eventsScriptGenerator : eventTypesScriptGenerator;
             codeGenerator.Reset();
-            
-            codeGenerator.ReplaceKeyword("Namespace", Settings.NamespaceForGeneratedCode);
 
             // Generate a config & playback class for every FMOD event.
             EditorEventRef[] events = EventManager.Events
@@ -890,7 +889,7 @@ namespace RoyTheunissen.FMODSyntax
                 string path = e.GetFilteredPath(true);
 
                 EventFolder folder = rootEventFolder;
-                
+
                 if (Settings.SyntaxFormat ==
                     FmodSyntaxSettings.SyntaxFormats.SubclassesPerFolder)
                 {
@@ -899,9 +898,9 @@ namespace RoyTheunissen.FMODSyntax
 
                 folder.ChildEvents.Add(e);
                 folder.ChildEvents.Sort((x, y) => String.Compare(x.Path, y.Path, StringComparison.Ordinal));
-                
+
                 string currentPath = path;
-                
+
                 bool eventExistedDuringPreviousCodeGeneration = metaDataFromPreviousCodeGeneration
                     .EventGuidToPreviousSyntaxPath.TryGetValue(e.Guid.ToString(), out string previousSyntaxPath);
                 bool shouldGenerateAlias = false;
@@ -909,13 +908,13 @@ namespace RoyTheunissen.FMODSyntax
                 {
                     string currentSyntaxPath = GetEventSyntaxPath(currentPath);
                     shouldGenerateAlias = previousSyntaxPath != currentSyntaxPath;
-                    
+
                     // Keep track of the event change we detected so we can try to automatically refactor existing
                     // code to reference the new path instead.
                     if (shouldGenerateAlias)
                         detectedEventChanges[previousSyntaxPath] = currentSyntaxPath;
                 }
-                
+
                 // Also generate aliases for this event if it has been renamed so you have a chance to update the
                 // code without it breaking. Outputs some nice warnings instead via an Obsolete attribute.
                 if (shouldGenerateAlias)
@@ -926,7 +925,7 @@ namespace RoyTheunissen.FMODSyntax
                     previousFolder.ChildEventToAliasPath[e] = previousSyntaxPath;
                 }
             }
-            
+
             // Generate code for the events per folder.
             parameterlessEventsCode = "";
             string eventsCode;
@@ -945,7 +944,7 @@ namespace RoyTheunissen.FMODSyntax
                 eventsCode = GenerateFolderCode(typeGenerator, containerName, rootEventFolder, isFields);
             }
             codeGenerator.ReplaceKeyword("Events", eventsCode, true);
-            
+
             if (isFields)
             {
                 codeGenerator.ReplaceKeyword("ParameterlessEventIds", parameterlessEventsCode, true);
@@ -969,16 +968,62 @@ namespace RoyTheunissen.FMODSyntax
             codeGenerator.ReplaceKeyword("UsingDirectives", eventUsingDirectivesCode);
 
             codeGenerator.GenerateFile(eventsScriptPath);
+
+            if (!isFields)
+            {
+                ApplyMemberHidingFixups(eventsScriptPath.GetAbsolutePath());
+            }
+        }
+
+        private static readonly Lazy<HashSet<string>> playablePlaybackBaseMemberNames = new Lazy<HashSet<string>>(() =>
+            new HashSet<string>(
+                typeof(FmodPlayablePlaybackBase)
+                    .GetMembers(BindingFlags.Public | BindingFlags.Instance)
+                    .Select(m => m.Name)));
+
+        private static void ApplyMemberHidingFixups(string absoluteFilePath)
+        {
+            if (!File.Exists(absoluteFilePath))
+                return;
+
+            string code = File.ReadAllText(absoluteFilePath);
+            string originalCode = code;
+            int totalReplacements = 0;
+
+            foreach (string memberName in playablePlaybackBaseMemberNames.Value)
+            {
+                string escapedName = Regex.Escape(memberName);
+
+                // Matches a generated parameter field declaration whose name collides with a base class member, e.g.:
+                //   public readonly ParameterFloat Volume = new ParameterFloat(...)
+                // Deliberately NOT anchored to line start (the generator doesn't guarantee one field per line), and
+                // deliberately loose about the type/initializer shape so small template formatting differences don't
+                // break the match. Requires 'public', optional 'readonly', a type token, the exact field name, '=',
+                // and 'new' — then stops, since that's enough to uniquely identify a field declaration.
+                string pattern =
+                    $@"\bpublic\s+(?!new\b)(?<rest>(?:readonly\s+)?[A-Za-z_][\w.<>\[\],\s]*?\s+{escapedName}\s*=\s*new\b)";
+
+                code = Regex.Replace(code, pattern, match =>
+                {
+                    totalReplacements++;
+                    return "public new " + match.Groups["rest"].Value;
+                });
+            }
+
+            if (code != originalCode)
+            {
+                File.WriteAllText(absoluteFilePath, code);
+            }
         }
 
         private static string DisableWarnings(string code, string header = null)
         {
             if (string.IsNullOrEmpty(code))
                 return code;
-            
+
             if (header == null)
                 header = string.Empty;
-            
+
             return header
                    + "#pragma warning disable 618\r\n"
                    + code
@@ -995,19 +1040,19 @@ namespace RoyTheunissen.FMODSyntax
                 string childFolderCode = GenerateFolderCode(typeGenerator, containerName, childFolder, isDeclaration);
                 childFoldersCode += childFolderCode + "\r\n";
             }
-            
+
             // Add an extra linebreak if there's subfolders.
             if (!string.IsNullOrEmpty(childFoldersCode))
                 childFoldersCode += "\r\n";
-            
+
             // NOTE: Do this AFTER we have gathered code from child folders because there is recursion there. Otherwise
             // our children would reset the event folder generator that we're using.
             eventFolderGenerator.Reset();
-            
+
             eventFolderGenerator.ReplaceKeyword("FolderName", eventFolder.Name);
             eventFolderGenerator.ReplaceKeyword("FolderTypeName", eventFolder.Name + "Folder");
             eventFolderGenerator.ReplaceKeyword("Subfolders", childFoldersCode, true);
-            
+
             string eventTypeAliasesCode = "";
             string eventAliasesCode = "";
             string eventTypesCode = string.Empty;
@@ -1043,7 +1088,7 @@ namespace RoyTheunissen.FMODSyntax
             {
                 FmodSyntaxSettings.SyntaxFormats previousSyntaxFormat = metaDataFromPreviousCodeGeneration.SyntaxFormat;
                 FmodSyntaxSettings.SyntaxFormats currentSyntaxFormat = Settings.SyntaxFormat;
-                
+
                 foreach (KeyValuePair<EditorEventRef, string> eventPreviousPathPair in
                          eventFolder.ChildEventToAliasPath)
                 {
@@ -1075,7 +1120,7 @@ namespace RoyTheunissen.FMODSyntax
 
             // Also add a section for any event type aliases, if needed.
             const string eventTypeAliasesKeyword = "EventTypeAliases";
-            
+
             // NOTE: We disable obsolete warnings for the classes themselves, as technically the Config class
             // is using the obsolete Playback class, but we only want obsolete warnings where it is ACTUALLY
             // used in the codebase by developers.
@@ -1097,7 +1142,7 @@ namespace RoyTheunissen.FMODSyntax
                 eventFolderGenerator.RemoveKeywordLines(eventTypesKeyword);
                 eventTypesCodeToBePlacedOutsideOfRootFolder = eventTypesCode;
             }
-            
+
             // Also decide where to place the event type aliases, which should either be in the appropriate folder
             // or *next* to the AudioEvents class for folderless syntaxes.
             if (metaDataFromPreviousCodeGeneration.SyntaxFormat ==
@@ -1115,9 +1160,9 @@ namespace RoyTheunissen.FMODSyntax
                 if (!string.IsNullOrEmpty(eventTypeAliasesCode))
                     eventTypesCodeToBePlacedOutsideOfRootFolder += "\r\n" + eventTypeAliasesCode + "\r\n";
             }
-            
+
             eventFolderGenerator.ReplaceKeyword("Events", eventsCode, true);
-            
+
             // Also add a section for any event aliases, if needed.
             const string eventAliasesKeyword = "EventAliases";
             if (string.IsNullOrEmpty(eventAliasesCode) || !Settings.GenerateFallbacksForChangedEvents)
@@ -1132,7 +1177,7 @@ namespace RoyTheunissen.FMODSyntax
 
             string baseType = isDeclaration ? "" : " : FmodAudioFolder";
             eventFolderGenerator.ReplaceKeyword("BaseType", baseType);
-            
+
             return eventFolderGenerator.GetCode();
         }
 
@@ -1145,18 +1190,16 @@ namespace RoyTheunissen.FMODSyntax
         private static void GenerateMiscellaneousScripts()
         {
             // NOTE: These are all together because that way data can be cached more easily.
-            
+
             banksScriptGenerator.Reset();
-            
-            banksScriptGenerator.ReplaceKeyword("Namespace", Settings.NamespaceForGeneratedCode);
-            
+
             string banksCode = string.Empty;
 
             // Need to access the banks this way, not via EventManager.Banks because EditorBankRef doesn't have info
             // on the buses, and we need that for the sake of generating bus code.
             EditorUtils.LoadPreviewBanks();
             EditorUtils.System.getBankList(out Bank[] banks);
-            
+
             banks = banks.OrderBy(b => b.getPath()).ToArray();
             List<FMOD.Studio.Bus> buses = new List<FMOD.Studio.Bus>();
             List<FMOD.Studio.VCA> VCAs = new List<FMOD.Studio.VCA>();
@@ -1168,7 +1211,7 @@ namespace RoyTheunissen.FMODSyntax
 
                 if (bankPath.Contains("."))
                     continue;
-                
+
                 bankFieldGenerator.ReplaceKeyword("BankName", bankName);
                 bankFieldGenerator.ReplaceKeyword("BankPath", bankPath);
                 banksCode += bankFieldGenerator.GetCode();
@@ -1188,46 +1231,42 @@ namespace RoyTheunissen.FMODSyntax
                         VCAs.Add(bankVCA);
                 }
             }
-            
+
             banksScriptGenerator.ReplaceKeyword("Banks", banksCode);
             banksScriptGenerator.GenerateFile(BanksScriptPath);
-            
+
             // Now that we know the buses, we can also generate a file for accessing those.
             busesScriptGenerator.Reset();
-            
-            busesScriptGenerator.ReplaceKeyword("Namespace", Settings.NamespaceForGeneratedCode);
-            
+
             string busesCode = string.Empty;
             buses = buses.OrderBy(b => b.getPath()).ToList();
             foreach (FMOD.Studio.Bus bus in buses)
             {
                 string busPath = bus.getPath();
                 string busName = bus.GetName();
-                    
+
                 if (string.IsNullOrWhiteSpace(busName))
                     busName = "Master";
-                    
+
                 busFieldGenerator.Reset();
                 busFieldGenerator.ReplaceKeyword("BusName", busName);
                 busFieldGenerator.ReplaceKeyword("BusPath", busPath);
                 busesCode += busFieldGenerator.GetCode();
             }
-            
+
             busesScriptGenerator.ReplaceKeyword("Buses", busesCode);
             busesScriptGenerator.GenerateFile(BusesScriptPath);
 
             // Now that we know the VCAs, we can also generate a file for accessing those.
             vcasScriptGenerator.Reset();
-            
-            vcasScriptGenerator.ReplaceKeyword("Namespace", Settings.NamespaceForGeneratedCode);
-            
+
             string VCAsCode = string.Empty;
             VCAs = VCAs.OrderBy(b => b.getPath()).ToList();
             foreach (FMOD.Studio.VCA VCA in VCAs)
             {
                 string vcaPath = VCA.getPath();
                 string vcaName = VCA.GetName();
-                    
+
                 if (string.IsNullOrWhiteSpace(vcaName))
                     continue;
 
@@ -1236,17 +1275,17 @@ namespace RoyTheunissen.FMODSyntax
                 vcaFieldGenerator.ReplaceKeyword("VCAPath", vcaPath);
                 VCAsCode += vcaFieldGenerator.GetCode();
             }
-            
+
             vcasScriptGenerator.ReplaceKeyword("VCAs", VCAsCode);
             vcasScriptGenerator.GenerateFile(VCAsScriptPath);
         }
-        
+
         private static void FindChangedEvents()
         {
             EditorEventRef[] events = EventManager.Events
                 .Where(e => e.Path.StartsWith(EditorEventRefExtensions.EventPrefix))
                 .OrderBy(e => e.Path).ToArray();
-            
+
             detectedEventChanges.Clear();
             foreach (EditorEventRef e in events)
             {
@@ -1256,7 +1295,7 @@ namespace RoyTheunissen.FMODSyntax
                 {
                     string currentPath = e.GetFilteredPath(true);
                     string currentSyntaxPath = GetEventSyntaxPath(currentPath);
-                    
+
                     // Keep track of the event change we detected so we can try to automatically refactor existing
                     // code to reference the new path instead.
                     if (previousSyntaxPath != currentSyntaxPath)
@@ -1270,12 +1309,10 @@ namespace RoyTheunissen.FMODSyntax
         private static void TryRefactoringOldEventReferences()
         {
             LoadPreviousMetaData();
-            
+
             FindChangedEvents();
-            
-            TryRefactoringOldEventReferencesInternal(true);
         }
-        
+
         [MenuItem(RefactorOldEventReferencesMenuPath, true, 999999998)]
         private static bool TryRefactoringOldEventReferencesValidate()
         {
@@ -1283,38 +1320,7 @@ namespace RoyTheunissen.FMODSyntax
         }
 #endif // !AUDIO_SYNTAX_PACKAGE_DETECTED
 
-        private static void TryRefactoringOldEventReferencesInternal(bool isTriggeredExplicitlyViaMenu)
-        {
-            const string messageTitle = "Auto-refactor references to changed events";
-            
-            if (detectedEventChanges.Count == 0)
-            {
-                if (isTriggeredExplicitlyViaMenu)
-                {
-                    EditorUtility.DisplayDialog(
-                        messageTitle, "No events were detected as having been renamed or moved.", "OK");
-                }
-                return;
-            }
-            
-            string messageText =   "FMOD-Syntax detected that events were renamed or moved. References to the " +
-                                   "events in question will break. We can automatically try and refactor these " +
-                                   "old references in your scripts. We recommend that you commit your changes to " +
-                                   "version control first so that you don't lose any work.";
-            if (!isTriggeredExplicitlyViaMenu)
-                messageText += "\n\nYou can access this feature later via " + RefactorOldEventReferencesMenuPath + ".";
-            
-            const string yesText = "Auto-refactor";
-            const string noText = "Cancel";
-            bool autoRefactor = EditorUtility.DisplayDialog(messageTitle, messageText, yesText, noText);
-            if (!autoRefactor)
-                return;
-
-            RefactorOldEventReferences(EventContainerClass);
-            RefactorOldEventReferences(SnapshotContainerClass);
-        }
-
-        const string EventContainerClass = "AudioEvents";
+        const string EventContainerClass = "Audio";
         const string SnapshotContainerClass = "AudioSnapshots";
 
         private static string GetEventConfigType(
@@ -1335,7 +1341,7 @@ namespace RoyTheunissen.FMODSyntax
 
             return eventSyntaxPath + playbackSuffix;
         }
-        
+
         private static string GetEventField(string eventSyntaxPath, string containerName)
         {
             return containerName + "." + eventSyntaxPath;
@@ -1346,7 +1352,7 @@ namespace RoyTheunissen.FMODSyntax
         private static string ReplaceWords(string text, string oldWord, string newWord, out bool didReplace)
         {
             didReplace = false;
-            
+
             int startIndex = text.IndexOf(oldWord, StringComparison.Ordinal);
             if (startIndex == -1)
                 return text;
@@ -1380,13 +1386,13 @@ namespace RoyTheunissen.FMODSyntax
                     string textPrecedingWord = text.Substring(0, startIndex);
                     string textSucceedingWord = text.Substring(endIndex);
                     text = textPrecedingWord + newWord + textSucceedingWord;
-                    
+
                     didReplace = true;
-                    
+
                     // Need to recompute the end index now that we modified the original text!
                     endIndex = startIndex + newWord.Length;
                 }
-                
+
                 // Try to find the next occurrence of the word.
                 startIndex = text.IndexOf(oldWord, endIndex, StringComparison.Ordinal);
 
@@ -1410,25 +1416,25 @@ namespace RoyTheunissen.FMODSyntax
         {
             FmodSyntaxSettings.SyntaxFormats oldSyntaxFormat = metaDataFromPreviousCodeGeneration.SyntaxFormat;
             FmodSyntaxSettings.SyntaxFormats newSyntaxFormat = Settings.SyntaxFormat;
-            
+
             Dictionary<string, string> renamesToPerform = new Dictionary<string, string>();
-            foreach (KeyValuePair<string,string> previousEventPathToNewPath in detectedEventChanges)
+            foreach (KeyValuePair<string, string> previousEventPathToNewPath in detectedEventChanges)
             {
                 string oldSyntaxPath = previousEventPathToNewPath.Key;
                 string newSyntaxPath = previousEventPathToNewPath.Value;
-                
+
                 // Rename references to the config type
                 string oldConfigType = GetEventConfigType(oldSyntaxPath, oldSyntaxFormat, containerName);
                 string newConfigType = GetEventConfigType(newSyntaxPath, newSyntaxFormat, containerName);
                 if (!string.Equals(oldConfigType, newConfigType, StringComparison.Ordinal))
                     renamesToPerform[oldConfigType] = newConfigType;
-                
+
                 // Rename references to the playback type
                 string oldPlaybackType = GetEventPlaybackType(oldSyntaxPath, oldSyntaxFormat);
                 string newPlaybackType = GetEventPlaybackType(newSyntaxPath, newSyntaxFormat);
                 if (!string.Equals(oldPlaybackType, newPlaybackType, StringComparison.Ordinal))
                     renamesToPerform[oldPlaybackType] = newPlaybackType;
-                
+
                 // Rename references to the field
                 string oldFieldName = GetEventField(oldSyntaxPath, containerName);
                 string newFieldName = GetEventField(newSyntaxPath, containerName);
@@ -1448,14 +1454,14 @@ namespace RoyTheunissen.FMODSyntax
             for (int i = 0; i < csFiles.Length; i++)
             {
                 string file = csFiles[i].ToUnityPath();
-            
+
                 string fileRelative = file.RemovePrefix(Application.dataPath + "/");
-                
+
                 // Just a sanity check, but don't refactor FMOD-Syntax itself...
                 // The only thing that I could see it rename is examples in some of the comments.
                 if (fileRelative.StartsWith("FMOD-Syntax/Runtime/") || fileRelative.StartsWith("FMOD-Syntax/Editor/"))
                     continue;
-                
+
                 // Don't update the generated code itself. That one is already up to date.
                 if (fileRelative.StartsWith(Settings.GeneratedScriptsFolderPath))
                     continue;
@@ -1474,7 +1480,7 @@ namespace RoyTheunissen.FMODSyntax
                         if (didRename)
                             didAnyRename = true;
                     }
-                    
+
                     if (didAnyRename)
                         File.WriteAllText(csFiles[i], fileText);
                 }
@@ -1484,7 +1490,7 @@ namespace RoyTheunissen.FMODSyntax
                     throw;
                 }
             }
-            
+
             AssetDatabase.Refresh();
 #endif // !LOG_FMOD_AUTO_RENAMES
         }
