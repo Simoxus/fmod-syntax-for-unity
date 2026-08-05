@@ -1,23 +1,16 @@
 {
-  "name": "com.roytheunissen.fmod-syntax",
+  "name": "com.simoxus.fmod-syntax",
   "displayName": "FMOD Syntax",
-  "version": "0.2.6",
-  "unity": "2021.3",
-  "description": "Generates code to allow invoking FMOD events with a strongly-typed syntax.",
-  "keywords": [
-    "FMOD",
-    "Audio",
-    "Code Generation"
-  ],
+  "version": "1.2.6",
+  "description": "Generates definitions for FMOD events with a strongly-typed syntax.",
   "author": {
     "name": "Roy Theunissen",
     "url": "https://www.roytheunissen.com"
   },
-  "category": "audio",
   "homepage": "https://github.com/RoyTheunissen/FMOD-Syntax",
   "repository": {
     "type": "git",
-    "url": "https://github.com/RoyTheunissen/FMOD-Syntax"
+    "url": "https://github.com/simoxus/fmod-syntax-for-unity"
   },
   "bugs": "https://github.com/RoyTheunissen/FMOD-Syntax/issues"
 }

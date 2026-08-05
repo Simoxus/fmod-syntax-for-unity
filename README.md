@@ -1,4 +1,4 @@
-[![Roy Theunissen](Documentation~/Github%20Header.jpg)](http://roytheunissen.com)
+[![Roy Theunissen](.github/header.jpg)](http://roytheunissen.com)
 [![License: MIT](https://img.shields.io/badge/License-MIT-brightgreen.svg)](LICENSE.md)
 ![GitHub Follow](https://img.shields.io/github/followers/RoyTheunissen?label=RoyTheunissen&style=social)
 <a href="https://roytheunissen.com" target="blank"><picture>
@@ -22,11 +22,7 @@
     <img alt="tiktok" src="tiktok_dark.png" width="20" height="20" />
 </picture></a>
 
-_Generates code to allow invoking FMOD events with a strongly-typed syntax._
-
-> [!WARNING]  
-> FMOD-Syntax is superceded by [Audio-Syntax](https://github.com/RoyTheunissen/Audio-Syntax), which lets you use the same workflow/feature with Unity's native audio solution as well.
-> Please transition to that package. A Migration Wizard has been created that helps transition your project automatically. [More info here](https://github.com/RoyTheunissen/Audio-Syntax/wiki/FMOD-Syntax#migrating-from-the-original-fmod-syntax-package-to-audio-syntax).
+Generates definitions for FMOD events with a strongly-typed syntax.
 
 ## About the Project
 
@@ -44,7 +40,7 @@ AudioEvents.PlayerJump.Play(transform);
 
 This would require a little bit of code generation, and that's where `FMOD-Syntax` comes in. With a simple setup wizard and one line of code in your audio service for culling expired events you can start dispatching FMOD events with parameters in as little as one line of code.
 
-![Example](Documentation~/Generated%20Code%20Files.png)
+![Example](.github/generated-code-files.png)
 
 This setup allows events and parameters to be renamed gracefully as you can do it via your IDE, update your banks accordingly and then re-generate the code. If events are renamed in the banks and you still reference those events by their old names, warnings will be thrown to give you a chance to refactor without immediately getting compile errors.
 
