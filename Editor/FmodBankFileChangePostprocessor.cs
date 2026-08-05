@@ -1,134 +1,58 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Security.Cryptography;
+﻿using FMODUnity;
+using System;
 using UnityEditor;
 using UnityEngine;
 
 namespace RoyTheunissen.FMODSyntax
 {
     /// <summary>
-    /// Watches for changes to built FMOD bank files (e.g. in StreamingAssets) and automatically
-    /// regenerates FMOD-Syntax code when their *content* actually changes (not just on reimport).
+    /// Watches FMODUnity.EventManager's cache and regenerates FMOD-Syntax code, but only when the
+    /// underlying event/parameter/bank data has actually changed from what's recorded in the
+    /// generated code's own metadata - not just because FMOD's cache timestamp moved (which happens
+    /// on every bank rebuild, including no-op ones).
     /// </summary>
-    public class FmodBankFileChangePostprocessor : AssetPostprocessor
+    [InitializeOnLoad]
+    public static class FmodBankFileChangePostprocessor
     {
-        private const string BankExtension = ".bank";
+        private static DateTime lastSeenCacheTime = DateTime.MinValue;
 
-        private static string HashCacheFilePath =>
-            Application.dataPath.GetParentDirectory() + "/UserSettings/FMOD-Syntax/bankHashes.json";
-
-        [Serializable]
-        private class HashEntry
+        static FmodBankFileChangePostprocessor()
         {
-            public string path;
-            public string hash;
+            EditorApplication.update += OnEditorUpdate;
         }
 
-        [Serializable]
-        private class HashCache
+        private static void OnEditorUpdate()
         {
-            public List<HashEntry> entries = new List<HashEntry>();
+            if (!EventManager.IsInitialized) return;
+
+            DateTime currentCacheTime = EventManager.CacheTime;
+
+            // Cheap early-out: FMOD hasn't recached since we last looked, nothing to check.
+            if (currentCacheTime == DateTime.MinValue || currentCacheTime == lastSeenCacheTime) return;
+
+            lastSeenCacheTime = currentCacheTime;
+
+            // The cache time itself bumps on every bank rebuild regardless of whether anything
+            // codegen-relevant changed, so compare against the fingerprint already embedded in
+            // the last generated output rather than trusting the timestamp alone.
+            string currentFingerprint = FmodContentFingerprint.Compute();
+            string previousFingerprint = FmodCodeGenerator.GetPreviousContentFingerprint();
+
+            if (currentFingerprint == previousFingerprint) return;
+
+            RegenerateCode();
         }
 
-        private static void OnPostprocessAllAssets(
-            string[] importedAssets, string[] deletedAssets, string[] movedAssets, string[] movedFromAssetPaths)
+        private static void RegenerateCode()
         {
-            string[] candidatePaths = importedAssets
-                .Concat(movedAssets)
-                .Where(path => path.EndsWith(BankExtension, StringComparison.OrdinalIgnoreCase))
-                .ToArray();
-
-            string[] deletedBankPaths = deletedAssets
-                .Where(path => path.EndsWith(BankExtension, StringComparison.OrdinalIgnoreCase))
-                .ToArray();
-
-            if (candidatePaths.Length == 0 && deletedBankPaths.Length == 0)
-                return;
-
-            Dictionary<string, string> cachedHashes = LoadHashCache();
-            bool anyContentActuallyChanged = false;
-
-            foreach (string deletedPath in deletedBankPaths)
-            {
-                if (cachedHashes.Remove(deletedPath))
-                    anyContentActuallyChanged = true;
-            }
-
-            foreach (string path in candidatePaths)
-            {
-                string absolutePath = path.GetAbsolutePath();
-                if (!File.Exists(absolutePath))
-                    continue;
-
-                string newHash = ComputeFileHash(absolutePath);
-
-                bool hadPreviousHash = cachedHashes.TryGetValue(path, out string previousHash);
-                if (!hadPreviousHash || previousHash != newHash)
-                {
-                    cachedHashes[path] = newHash;
-                    anyContentActuallyChanged = true;
-                }
-            }
-
-            if (!anyContentActuallyChanged)
-                return;
-
-            SaveHashCache(cachedHashes);
-
-            FmodCodeGenerator.GenerateCode();
-        }
-
-        private static string ComputeFileHash(string absolutePath)
-        {
-            using (MD5 md5 = MD5.Create())
-            using (FileStream stream = File.OpenRead(absolutePath))
-            {
-                byte[] hashBytes = md5.ComputeHash(stream);
-                return Convert.ToBase64String(hashBytes);
-            }
-        }
-
-        private static Dictionary<string, string> LoadHashCache()
-        {
-            string filePath = HashCacheFilePath;
-            Dictionary<string, string> result = new Dictionary<string, string>();
-
-            if (!File.Exists(filePath))
-                return result;
-
             try
             {
-                string json = File.ReadAllText(filePath);
-                HashCache cache = JsonUtility.FromJson<HashCache>(json);
-                if (cache?.entries != null)
-                {
-                    foreach (HashEntry entry in cache.entries)
-                        result[entry.path] = entry.hash;
-                }
+                FmodCodeGenerator.GenerateCode();
             }
-            catch (Exception)
+            catch (Exception e)
             {
+                Debug.LogException(e);
             }
-
-            return result;
-        }
-
-        private static void SaveHashCache(Dictionary<string, string> hashes)
-        {
-            HashCache cache = new HashCache
-            {
-                entries = hashes.Select(kvp => new HashEntry { path = kvp.Key, hash = kvp.Value }).ToList()
-            };
-
-            string json = JsonUtility.ToJson(cache, true);
-            string filePath = HashCacheFilePath;
-
-            string directory = Path.GetDirectoryName(filePath);
-            Directory.CreateDirectory(directory);
-
-            File.WriteAllText(filePath, json);
         }
     }
 }
