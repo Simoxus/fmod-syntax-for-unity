@@ -8,11 +8,6 @@ using UnityEngine;
 
 namespace RoyTheunissen.FMODSyntax
 {
-    /// <summary>
-    /// Watches FMODUnity.EventManager's cache and automatically regenerates FMOD-Syntax code, but only
-    /// when the underlying event/parameter/bank data has actually changed - not just because FMOD's
-    /// cache timestamp moved (which happens on every bank rebuild, including no-op ones).
-    /// </summary>
     [InitializeOnLoad]
     public static class FmodBankFileChangePostprocessor
     {
@@ -36,15 +31,11 @@ namespace RoyTheunissen.FMODSyntax
 
             DateTime currentCacheTime = EventManager.CacheTime;
 
-            // Cheap early-out: FMOD hasn't recached since we last looked, nothing to check at all.
             if (currentCacheTime == DateTime.MinValue || currentCacheTime == lastSeenCacheTime) return;
 
             lastSeenCacheTime = currentCacheTime;
             SavePersistedCacheTime(currentCacheTime);
 
-            // The cache time itself is NOT a reliable "did codegen-relevant data change" signal - it
-            // bumps on every bank rebuild. So fingerprint the actual data we generate code from and
-            // only regenerate if THAT changed.
             string fingerprint = ComputeFingerprint();
             string previousFingerprint = EditorPrefs.GetString(EditorPrefsFingerprintKey, string.Empty);
 
@@ -55,11 +46,6 @@ namespace RoyTheunissen.FMODSyntax
             RegenerateCode();
         }
 
-        /// <summary>
-        /// Stable hash of everything FmodCodeGenerator actually reads: events (path, guid, flags),
-        /// their local parameters, global parameters, and banks. Deliberately excludes file
-        /// timestamps/sizes, since those change on every build regardless of relevance to codegen.
-        /// </summary>
         private static string ComputeFingerprint()
         {
             StringBuilder builder = new StringBuilder();

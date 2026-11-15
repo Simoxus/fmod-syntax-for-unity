@@ -118,20 +118,20 @@ namespace RoyTheunissen.FMODSyntax
     }
 
 #if SCRIPTABLE_OBJECT_COLLECTION
-    public sealed class ParameterScriptableObjectCollectionItem<ItemType> : ParameterGeneric<ItemType>
-        where ItemType : ScriptableObjectCollectionItem
+    public sealed class ParameterScriptableObjectCollectionItem<Type> : ParameterGeneric<Type>
+        where Type : ScriptableObjectCollectionItem
     {
         public ParameterScriptableObjectCollectionItem(PARAMETER_ID id, bool isGlobal, string name)
             : base(id, isGlobal, name)
         {
         }
 
-        protected override ItemType GetValueFromFloat(float value)
+        protected override Type GetValueFromFloat(float value)
         {
-            return ScriptableObjectCollection<ItemType>.Values[(int)value];
+            return ScriptableObjectCollection<Type>.Values[(int)value];
         }
 
-        protected override float GetFloatFromValue(ItemType value)
+        protected override float GetFloatFromValue(Type value)
         {
             return value.Index;
         }
